@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "ezserialization"
+version = "0.1.0"
+description = ""
+authors = ["Matas Gumbinas <matas.gumbinas@gmail.com>"]
+readme = "README.md"
+
+packages = [
+  { include = "ezserialization", from = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.8.4"
+mypy = "^1.14.0"
+pytest = "^8.3.4"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+#include = '\.pyi?$'
+exclude = [
+    ".eggs",
+    ".git",
+    ".idea",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".pyenv",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".vscode",
+    "dist",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = ["I"]
+
+
+[tool.mypy]
+python_version = 3.10
+warn_return_any = true
+warn_unused_configs = true
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
