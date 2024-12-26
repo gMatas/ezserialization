@@ -69,7 +69,7 @@ obj_dict = obj.to_dict()
 
 pprint(obj_dict, indent=2)
 # Output:
-# {'_type_': '__main__.Example', 'some_values': 'wow'}
+# {'_type_': '__main__.Example', 'some_value': 'wow'}
 
 obj2 = deserialize(obj_dict)
 
