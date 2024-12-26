@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "ezserialization"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Matas Gumbinas <matas.gumbinas@gmail.com>"]
+repository = "https://github.com/gMatas/ezserialization"
 readme = "README.md"
 
 packages = [
