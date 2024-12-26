@@ -1,18 +1,16 @@
 [tool.poetry]
 name = "ezserialization"
-version = "0.2.1"
-description = ""
+version = "0.2.2"
+description = "Simple, easy to use & transparent python objects serialization & deserialization."
 authors = ["Matas Gumbinas <matas.gumbinas@gmail.com>"]
 repository = "https://github.com/gMatas/ezserialization"
 readme = "README.md"
-
 packages = [
   { include = "ezserialization", from = "src" }
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.8.4"
@@ -30,7 +28,6 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
-#include = '\.pyi?$'
 exclude = [
     ".eggs",
     ".git",
@@ -49,12 +46,10 @@ exclude = [
 [tool.ruff.lint]
 select = ["I"]
 
-
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
-
 
 [build-system]
 requires = ["poetry-core"]
