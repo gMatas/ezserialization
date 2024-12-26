@@ -9,6 +9,9 @@ readme = "README.md"
 packages = [
   { include = "ezserialization", from = "src" }
 ]
+include = [
+    { path = "src/ezserialization/py.typed", format = ["sdist", "wheel"] }
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
