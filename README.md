@@ -17,7 +17,7 @@ EzSerialization is meant to be simple in features and usage. It follows these tw
   instances of any kind to dicts. Implementing them is left to the end-user, thus being transparent with what actually 
   happens with the user data.
 
-All EzSerialization do is it wraps `to_dict()` & `from_dict()` methods for selected classes to infect, register and 
+All EzSerialization do is it wraps `to_dict()` & `from_dict()` methods for selected classes to inject, register and 
 use class type information for deserialization.
 
 ## Install
@@ -36,7 +36,7 @@ poetry install
 
 To use this package:
 
-- simply implement `Serializable` protocol for your classes by having defined `to_dict()` and 
+- implement `Serializable` protocol for your classes by having defined `to_dict()` and 
   `from_dict()` methods;
 - decorate your classes with `@serializable`.
 
