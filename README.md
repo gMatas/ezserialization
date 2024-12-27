@@ -2,6 +2,7 @@
 
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![PyPI](https://img.shields.io/pypi/v/ezserialization?style=flat)](https://pypi.org/project/ezserialization)
+[![mypy](https://img.shields.io/badge/mypy-checked-blue)](https://github.com/gMatas/ezserialization)
 [![License](https://img.shields.io/pypi/l/ezserialization)](https://github.com/gMatas/ezserialization/blob/main/LICENSE)
 
 **ezserialization** - Simple, easy to use & transparent python objects serialization & deserialization.
