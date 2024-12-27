@@ -9,13 +9,16 @@
 
 ## About
 
-EzSerialization is meant to be simple in features and usage. It follows these three ideas:
+EzSerialization is meant to be simple in features and usage. It follows these two ideas:
 
-- **python dicts based**. This package only helps to serialize objects to dicts. 
-  Converting them to JSON, XML, etc. is left to the user;
-- **transparent serialization logic**. It does not have automatic `from_dict` & `to_dict` methods that convert class 
+- **Python dicts based**. This package only helps to serialize objects to dicts. 
+  Converting them to JSON, XML, etc. is left to the user.
+- **Transparent serialization logic**. It does not have automatic `from_dict()` & `to_dict()` methods that convert class 
   instances of any kind to dicts. Implementing them is left to the end-user, thus being transparent with what actually 
-  happens with the user data;
+  happens with the user data.
+
+All EzSerialization do is it wraps `to_dict()` & `from_dict()` methods for selected classes to infect, register and 
+use class type information for deserialization.
 
 ## Install
 
@@ -37,13 +40,13 @@ To use this package:
   `from_dict()` methods;
 - decorate your classes with `@serializable`.
 
-During serialization, simply use your implemented `to_dict` method, and it will return 
-your defined dict `{'some_value': 'wow', ...}` placed inside a wrapper 
-dict `{'_type_': 'example.module.Example', 'some_value': 'wow', ...}`.
+During serialization, simply use your implemented `to_dict()` method, and it will return 
+your defined dict `{'some_value': 'wow', ...}`  injected with class type information 
+`{'_type_': 'example.module.Example', 'some_value': 'wow', ...}`.
 
-During de-serialization (via `deserialize()` method) the wrapped dict's `_type_` property will be removed and used 
-to import `example.module` module dynamically. Finally, the found `Example` class' `from_dict` method will be used 
-to create new object from the non-wrapped dict.
+During de-serialization (via `deserialize()` method) the modified dict's `_type_` property will be removed and used 
+to import `example.module` module dynamically. Finally, the found `Example` class' `from_dict()` method will be used 
+to create new object from the original dict.
 
 Here's an example:
 
@@ -82,5 +85,5 @@ print(obj.value == obj2.value)
 ## Configuration
 
 Currently only a single option is available for customizing `ezserialization`:
-- `ezserialization.TYPE_FIELD_NAME` - By default it is set to `_type_`, however if user's solution has `to_dict()` 
-  methods that already contains such field, an alternative field name can be set to override the default one.
+- `ezserialization.TYPE_FIELD_NAME` - by default it is set to `_type_`, however if user's solution has `to_dict()` 
+  methods that already contain such field, an alternative field name can be set to override the default one.
