@@ -1,7 +1,7 @@
 import functools
 import importlib
 from abc import abstractmethod
-from typing import Callable, Dict, Mapping, Optional, Protocol, Type, TypeVar, runtime_checkable
+from typing import Callable, Dict, Mapping, Optional, Protocol, Type, TypeVar
 
 __all__ = [
     "TYPE_FIELD_NAME",
@@ -20,7 +20,6 @@ This value can customized by the end-user.
 """
 
 
-@runtime_checkable
 class Serializable(Protocol):
     @abstractmethod
     def to_dict(self) -> Mapping: ...
@@ -28,6 +27,17 @@ class Serializable(Protocol):
     @classmethod
     @abstractmethod
     def from_dict(cls, src: Mapping) -> "Serializable": ...
+
+
+def _is_serializable_subclass(cls: Type) -> bool:
+    """
+    As of now, ``@runtime_checkable`` protocols only check if a subclass has the same methods as the target without
+    validating their full signatures.
+    Thus, mypy recommends not rely on this decorator and just use ``hasattr()`` instead.
+
+    :param cls: Type to check.
+    """
+    return hasattr(cls, "from_dict") and hasattr(cls, "to_dict")
 
 
 _T = TypeVar("_T", bound=Serializable)
@@ -85,7 +95,7 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
         if name in _types_ and not _is_same_type_by_qualname(cls_, _types_[name]):
             raise KeyError(f"This {name=} is already taken!")
 
-        if not issubclass(cls_, Serializable):
+        if not _is_serializable_subclass(cls_):
             raise TypeError("Decorated type is not serializable.")
 
         if cls_ not in _typenames_:
