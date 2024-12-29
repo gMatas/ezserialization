@@ -78,7 +78,7 @@ pprint(raw_obj_dict, indent=2)
 # Output:
 # {'some_value': 'wow'}
 
-# Serialization with ability automatic deserialization:
+# Serialization WITH automatic deserialization:
 obj_dict = obj.to_dict()
 pprint(obj_dict, indent=2)
 # Output:
