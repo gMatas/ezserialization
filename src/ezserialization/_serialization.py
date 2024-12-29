@@ -1,10 +1,16 @@
+import contextlib
 import functools
 import importlib
+import threading
 from abc import abstractmethod
-from typing import Callable, Dict, Mapping, Optional, Protocol, Type, TypeVar
+from copy import copy
+from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast
 
 __all__ = [
     "TYPE_FIELD_NAME",
+    "using_serialization",
+    "use_serialization",
+    "no_serialization",
     "Serializable",
     "serializable",
     "deserialize",
@@ -44,6 +50,39 @@ _T = TypeVar("_T", bound=Serializable)
 """
 Serializable object type.
 """
+
+_thread_local = threading.local()
+_thread_local.enabled = (_SERIALIZATION_ENABLED_DEFAULT := True)
+"""
+Thread-safe serialization enabling/disabling flag. 
+"""
+
+
+def using_serialization() -> bool:
+    if not hasattr(_thread_local, "enabled"):
+        _thread_local.enabled = _SERIALIZATION_ENABLED_DEFAULT
+    return cast(bool, _thread_local.enabled)
+
+
+@contextlib.contextmanager
+def use_serialization() -> Iterator[None]:
+    prev = using_serialization()
+    try:
+        _thread_local.enabled = _SERIALIZATION_ENABLED_DEFAULT
+        yield
+    finally:
+        _thread_local.enabled = prev
+
+
+@contextlib.contextmanager
+def no_serialization() -> Iterator[None]:
+    prev = using_serialization()
+    try:
+        _thread_local.enabled = not _SERIALIZATION_ENABLED_DEFAULT
+        yield
+    finally:
+        _thread_local.enabled = prev
+
 
 _types_: Dict[str, Type[Serializable]] = {}
 _typenames_: Dict[Type[Serializable], str] = {}
@@ -108,8 +147,10 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     # Wrap object with serialization metadata.
                     if TYPE_FIELD_NAME in data:
                         raise KeyError(f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping!")
-                    typename = _typenames_[type(obj)]
-                    return {TYPE_FIELD_NAME: typename, **data}
+                    if using_serialization():
+                        typename = _typenames_[type(obj)]
+                        return {TYPE_FIELD_NAME: typename, **data}
+                    return copy(data)
 
                 return to_dict_wrapper
 
@@ -123,7 +164,7 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     src = args[1] if len(args) == 2 else args[0]
                     # Remove deserialization metadata.
                     src = dict(src)
-                    del src[TYPE_FIELD_NAME]
+                    src.pop(TYPE_FIELD_NAME, None)
                     # Deserialize as-is.
                     return method(src)
 
