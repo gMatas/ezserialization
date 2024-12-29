@@ -9,13 +9,14 @@
 
 ## About
 
-EzSerialization is meant to be simple in features and usage. It follows these two ideas:
+EzSerialization is meant to be simple in features and usage. It follows these three ideas:
 
 - **Python dicts based**. This package only helps to serialize objects to dicts. 
   Converting them to JSON, XML, etc. is left to the user.
 - **Transparent serialization logic**. It does not have automatic `from_dict()` & `to_dict()` methods that convert class 
   instances of any kind to dicts. Implementing them is left to the end-user, thus being transparent with what actually 
-  happens with the user data.
+  happens with this data.
+- **Thread-safe**. Serialization, deserialization & its enabling/disabling is thread-safe.  
 
 All EzSerialization do is it wraps `to_dict()` & `from_dict()` methods for selected classes to inject, register and 
 use class type information for deserialization.
@@ -53,7 +54,7 @@ Here's an example:
 ```python
 from pprint import pprint
 from typing import Mapping
-from ezserialization import serializable, deserialize
+from ezserialization import serializable, deserialize, no_serialization
 
 @serializable
 class Example:
@@ -69,14 +70,21 @@ class Example:
 
 
 obj = Example("wow")
-obj_dict = obj.to_dict()
 
+# Serialization without ability to automatically deserialize:
+with no_serialization():
+    raw_obj_dict = obj.to_dict()
+pprint(raw_obj_dict, indent=2)
+# Output:
+# {'some_value': 'wow'}
+
+# Serialization with ability automatic deserialization:
+obj_dict = obj.to_dict()
 pprint(obj_dict, indent=2)
 # Output:
 # {'_type_': '__main__.Example', 'some_value': 'wow'}
 
 obj2 = deserialize(obj_dict)
-
 print(obj.value == obj2.value)
 # Output:
 # True
