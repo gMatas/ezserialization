@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ezserialization"
-version = "0.2.10"
+version = "0.2.11"
 description = "Simple, easy to use & transparent python objects serialization & deserialization."
 authors = ["Matas Gumbinas <matas.gumbinas@gmail.com>"]
 repository = "https://github.com/gMatas/ezserialization"

@@ -46,42 +46,41 @@ def _is_serializable_subclass(cls: Type) -> bool:
     return hasattr(cls, "from_dict") and hasattr(cls, "to_dict")
 
 
-_T = TypeVar("_T", bound=Serializable)
-"""
-Serializable object type.
-"""
-
 _thread_local = threading.local()
-_thread_local.enabled = (_SERIALIZATION_ENABLED_DEFAULT := True)
-"""
-Thread-safe serialization enabling/disabling flag. 
-"""
+
+
+def _get_serialization_enabled() -> bool:
+    if not hasattr(_thread_local, "enabled"):
+        _thread_local.enabled = True
+    return cast(bool, _thread_local.enabled)
+
+
+def _set_serialization_enabled(enabled: bool) -> None:
+    _thread_local.enabled = enabled
 
 
 def using_serialization() -> bool:
-    if not hasattr(_thread_local, "enabled"):
-        _thread_local.enabled = _SERIALIZATION_ENABLED_DEFAULT
-    return cast(bool, _thread_local.enabled)
+    return _get_serialization_enabled()
 
 
 @contextlib.contextmanager
 def use_serialization() -> Iterator[None]:
-    prev = using_serialization()
+    prev = _get_serialization_enabled()
     try:
-        _thread_local.enabled = _SERIALIZATION_ENABLED_DEFAULT
+        _set_serialization_enabled(True)
         yield
     finally:
-        _thread_local.enabled = prev
+        _set_serialization_enabled(prev)
 
 
 @contextlib.contextmanager
 def no_serialization() -> Iterator[None]:
-    prev = using_serialization()
+    prev = _get_serialization_enabled()
     try:
-        _thread_local.enabled = not _SERIALIZATION_ENABLED_DEFAULT
+        _set_serialization_enabled(False)
         yield
     finally:
-        _thread_local.enabled = prev
+        _set_serialization_enabled(prev)
 
 
 _types_: Dict[str, Type[Serializable]] = {}
@@ -125,6 +124,12 @@ def _is_same_type_by_qualname(a: Type, b: Type) -> bool:
     return _abs_qualname(a) == _abs_qualname(b)
 
 
+_T = TypeVar("_T", bound=Serializable)
+"""
+Serializable object type.
+"""
+
+
 def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
     def wrapper(cls_: Type[_T]) -> Type[_T]:
         nonlocal name
@@ -147,7 +152,7 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     # Wrap object with serialization metadata.
                     if TYPE_FIELD_NAME in data:
                         raise KeyError(f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping!")
-                    if using_serialization():
+                    if _get_serialization_enabled():
                         typename = _typenames_[type(obj)]
                         return {TYPE_FIELD_NAME: typename, **data}
                     return copy(data)
