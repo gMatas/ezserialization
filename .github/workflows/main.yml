@@ -8,6 +8,7 @@ on:
         - main
 jobs:
   validate:
+    name: validate
     runs-on: ubuntu-latest
     strategy:
       matrix:
