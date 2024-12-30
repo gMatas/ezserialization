@@ -90,6 +90,14 @@ print(obj.value == obj2.value)
 # True
 ```
 
+### Context managing
+
+EzSerialization supports two context managers:
+- `with no_serialization(): ...` - disables injecting class type metadata into the result of `to_dict()` method. 
+  Leaves the result dict unfit to be deserialized automatically via `deserialize()`;
+- `with use_serialization(): ...` - opposite of `no_serialization()`, enables class type metadata injection. 
+  Useful when using inside the disabled serialization scope.
+
 ## Configuration
 
 Currently only a single option is available for customizing `ezserialization`:
