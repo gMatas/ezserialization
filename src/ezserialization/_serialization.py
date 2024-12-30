@@ -43,7 +43,7 @@ def _is_serializable_subclass(cls: Type) -> bool:
 
     :param cls: Type to check.
     """
-    return hasattr(cls, "from_dict") and hasattr(cls, "to_dict")
+    return isinstance(cls, type) and hasattr(cls, "from_dict") and hasattr(cls, "to_dict")
 
 
 _thread_local = threading.local()
@@ -147,15 +147,15 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
 
             def wrap_to_dict(method: Callable[..., Mapping]):
                 @functools.wraps(method)
-                def to_dict_wrapper(obj: Serializable) -> Mapping:
-                    data = method(obj)
+                def to_dict_wrapper(__ctx, *__args, **__kwargs) -> Mapping:
+                    data = method(__ctx, *__args, **__kwargs)
                     # Wrap object with serialization metadata.
                     if TYPE_FIELD_NAME in data:
                         raise KeyError(f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping!")
                     if _get_serialization_enabled():
-                        typename = _typenames_[type(obj)]
-                        return {TYPE_FIELD_NAME: typename, **data}
-                    return copy(data)
+                        typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
+                        return {TYPE_FIELD_NAME: typename, **data}  # TODO: avoid copying data if possible
+                    return copy(data)  # TODO: avoid copying data if possible
 
                 return to_dict_wrapper
 
@@ -163,15 +163,30 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
 
             def wrap_from_dict(method: Callable[..., Serializable]):
                 @functools.wraps(method)
-                def from_dict_wrapper(*args) -> Serializable:
-                    # See if `from_dict` method is staticmethod-like or classmethod-like (or normal method-like),
-                    # i.e. `Serializable.from_dict(data)` or `Serializable().from_dict(data)`.
-                    src = args[1] if len(args) == 2 else args[0]
-                    # Remove deserialization metadata.
-                    src = dict(src)
+                def from_dict_wrapper(*__args, **__kwargs) -> Serializable:
+                    # Differentiate between different ways this method was called.
+                    first_arg_type = val if isinstance(val := __args[0], type) else type(val)
+                    if _is_same_type_by_qualname(first_arg_type, cls_):
+                        # When this method was called as instance-method i.e. Serializable().from_dict(...)
+                        __cls = first_arg_type
+                        src = __args[1]
+                        __args = __args[2:]
+                    else:
+                        # When this method was called as class-method i.e. Serializable.from_dict(...)
+                        __cls = cls_
+                        src = __args[0]
+                        __args = __args[1:]
+
+                    # Drop deserialization metadata.
+                    src = dict(src)  # TODO: avoid copying data
                     src.pop(TYPE_FIELD_NAME, None)
-                    # Deserialize as-is.
-                    return method(src)
+
+                    # Deserialize.
+                    if hasattr(method, "__self__"):
+                        # As bounded method (class or instance method)
+                        return method(src, *__args, **__kwargs)
+                    # As staticmethod (simple function)
+                    return method(__cls, src, *__args, **__kwargs)
 
                 return from_dict_wrapper
 
