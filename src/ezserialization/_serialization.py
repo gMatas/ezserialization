@@ -3,8 +3,9 @@ import functools
 import importlib
 import threading
 from abc import abstractmethod
-from copy import copy
-from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast
+from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, Union, cast
+
+from ezserialization._mappings import ObfuscatedDict, OverlayedDict
 
 __all__ = [
     "TYPE_FIELD_NAME",
@@ -18,11 +19,12 @@ __all__ = [
     "set_typename_alias",
 ]
 
+
 TYPE_FIELD_NAME = "_type_"
 """
 This attribute is being injected into the "serialized" object's dict to hold information about the source type. 
 
-This value can customized by the end-user.
+This value can be customized by the end-user.
 """
 
 
@@ -147,15 +149,21 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
 
             def wrap_to_dict(method: Callable[..., Mapping]):
                 @functools.wraps(method)
-                def to_dict_wrapper(__ctx, *__args, **__kwargs) -> Mapping:
+                def to_dict_wrapper(__ctx, *__args, **__kwargs) -> Union[Mapping, OverlayedDict]:
                     data = method(__ctx, *__args, **__kwargs)
                     # Wrap object with serialization metadata.
                     if TYPE_FIELD_NAME in data:
-                        raise KeyError(f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping!")
+                        raise KeyError(
+                            f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping! "
+                            f"Change ezserialization's {TYPE_FIELD_NAME=} to some other value to not conflict with "
+                            f"your existing codebase."
+                        )
                     if _get_serialization_enabled():
                         typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
-                        return {TYPE_FIELD_NAME: typename, **data}  # TODO: avoid copying data if possible
-                    return copy(data)  # TODO: avoid copying data if possible
+                        # Avoid copying data when data is immutable mapping i.e. `MappingProxyType` is received
+                        # instead of dict.
+                        return OverlayedDict({TYPE_FIELD_NAME: typename}, data)
+                    return data
 
                 return to_dict_wrapper
 
@@ -177,9 +185,8 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                         src = __args[0]
                         __args = __args[1:]
 
-                    # Drop deserialization metadata.
-                    src = dict(src)  # TODO: avoid copying data
-                    src.pop(TYPE_FIELD_NAME, None)
+                    # Conceal instead of copy the data without deserialization metadata.
+                    src = ObfuscatedDict(src, hidden_keys={TYPE_FIELD_NAME})
 
                     # Deserialize.
                     if hasattr(method, "__self__"):
