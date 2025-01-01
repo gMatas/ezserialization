@@ -103,3 +103,7 @@ EzSerialization supports two context managers:
 Currently only a single option is available for customizing `ezserialization`:
 - `ezserialization.type_field_name` - by default it is set to `_type_`, however if user's solution has `to_dict()` 
   methods that already contain such field, an alternative field name can be set to override the default one.
+
+## Contribution
+
+Want to contribute? Create an issue ticket at GitHub & let's discuss 🤗
