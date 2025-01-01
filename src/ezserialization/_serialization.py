@@ -3,12 +3,10 @@ import functools
 import importlib
 import threading
 from abc import abstractmethod
-from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, Union, cast
-
-from ezserialization._mappings import ObfuscatedDict, OverlayedDict
+from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast
 
 __all__ = [
-    "TYPE_FIELD_NAME",
+    "type_field_name",
     "using_serialization",
     "use_serialization",
     "no_serialization",
@@ -20,7 +18,7 @@ __all__ = [
 ]
 
 
-TYPE_FIELD_NAME = "_type_"
+type_field_name = "_type_"
 """
 This attribute is being injected into the "serialized" object's dict to hold information about the source type. 
 
@@ -102,7 +100,7 @@ def isdeserializable(src: Mapping) -> bool:
     :param src: Source mapping object.
     :return: True if object is deserializable.
     """
-    return isinstance(src, dict) and TYPE_FIELD_NAME in src
+    return isinstance(src, dict) and type_field_name in src
 
 
 def _abs_qualname(cls: Type) -> str:
@@ -149,20 +147,19 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
 
             def wrap_to_dict(method: Callable[..., Mapping]):
                 @functools.wraps(method)
-                def to_dict_wrapper(__ctx, *__args, **__kwargs) -> Union[Mapping, OverlayedDict]:
+                def to_dict_wrapper(__ctx, *__args, **__kwargs):
                     data = method(__ctx, *__args, **__kwargs)
                     # Wrap object with serialization metadata.
-                    if TYPE_FIELD_NAME in data:
+                    if type_field_name in data:
                         raise KeyError(
-                            f"Key '{TYPE_FIELD_NAME}' already exist in the serialized data mapping! "
-                            f"Change ezserialization's {TYPE_FIELD_NAME=} to some other value to not conflict with "
+                            f"Key '{type_field_name}' already exist in the serialized data mapping! "
+                            f"Change ezserialization's {type_field_name=} to some other value to not conflict with "
                             f"your existing codebase."
                         )
                     if _get_serialization_enabled():
                         typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
-                        # Avoid copying data when data is immutable mapping i.e. `MappingProxyType` is received
-                        # instead of dict.
-                        return OverlayedDict({TYPE_FIELD_NAME: typename}, data)
+                        # Add deserialization metadata.
+                        return {type_field_name: typename, **data}
                     return data
 
                 return to_dict_wrapper
@@ -185,8 +182,9 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                         src = __args[0]
                         __args = __args[1:]
 
-                    # Conceal instead of copy the data without deserialization metadata.
-                    src = ObfuscatedDict(src, hidden_keys={TYPE_FIELD_NAME})
+                    # Discard deserialization metadata.
+                    src = src.copy()
+                    src.pop(type_field_name, None)
 
                     # Deserialize.
                     if hasattr(method, "__self__"):
@@ -213,9 +211,9 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
 
 def deserialize(src: Mapping) -> Serializable:
     if not isdeserializable(src):
-        raise KeyError(f"Given data mapping does not contain key '{TYPE_FIELD_NAME}' required for deserialization.")
+        raise KeyError(f"Given data mapping does not contain key '{type_field_name}' required for deserialization.")
 
-    typename = src[TYPE_FIELD_NAME]
+    typename = src[type_field_name]
     assert isinstance(typename, str), f"`typename` must be a string! Received {type(typename)=}"
 
     if typename not in _types_:
