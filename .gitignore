@@ -89,3 +89,6 @@ dump
 
 # Poetry
 poetry.toml
+
+# Misc
+dev/
