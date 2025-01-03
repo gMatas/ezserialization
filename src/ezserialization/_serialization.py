@@ -216,8 +216,8 @@ def deserialize(src: Mapping) -> Serializable:
     typename = src[type_field_name]
     assert isinstance(typename, str), f"`typename` must be a string! Received {type(typename)=}"
 
+    typename_alias = None
     if typename not in _types_:
-        typename_alias = None
         if typename in _typename_aliases_:
             typename_alias = typename
             typename = _typename_aliases_[typename]
@@ -231,6 +231,6 @@ def deserialize(src: Mapping) -> Serializable:
                 err_msg += f" ({typename_alias=})"
             raise ImportError(err_msg)
 
-    cls = _types_[typename]
+    cls = _types_[typename if typename_alias is None else typename_alias]
     obj = cls.from_dict(src)
     return obj
