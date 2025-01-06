@@ -27,7 +27,7 @@ jobs:
       - name: Install poetry
         run: |
           python -m venv $POETRY_HOME
-          $POETRY_HOME/bin/pip install "poetry~=1.7.1"
+          $POETRY_HOME/bin/pip install "poetry>=2.0.0,<3.0.0"
           $POETRY_HOME/bin/poetry --version
       - name: Install package
         run: |
@@ -63,7 +63,7 @@ jobs:
       - name: Install poetry
         run: |
           python -m venv $POETRY_HOME
-          $POETRY_HOME/bin/pip install "poetry~=1.7.1"
+          $POETRY_HOME/bin/pip install "poetry>=2.0.0,<3.0.0"
           $POETRY_HOME/bin/poetry --version
       - name: Install package
         run: |
