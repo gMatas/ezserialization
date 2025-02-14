@@ -1,6 +1,6 @@
 [project]
 name = "ezserialization"
-version = "0.5.3"
+version = "0.5.4"
 description = "Simple, easy to use & transparent python objects serialization & deserialization."
 authors = [
     { name = "Matas Gumbinas", email = "matas.gumbinas@gmail.com" }
