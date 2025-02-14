@@ -5,7 +5,7 @@
 [![mypy](https://img.shields.io/badge/mypy-checked-blue)](https://github.com/gMatas/ezserialization)
 [![License](https://img.shields.io/pypi/l/ezserialization)](https://github.com/gMatas/ezserialization/blob/main/LICENSE)
 
-**ezserialization** - Simple, easy to use & transparent python objects serialization & deserialization.
+**ezserialization** - Simple, easy to use & transparent python objects serialization & deserialization by reference.
 
 ## About
 
