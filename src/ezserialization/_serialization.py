@@ -149,12 +149,19 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 @functools.wraps(method)
                 def to_dict_wrapper(__ctx, *__args, **__kwargs):
                     data = method(__ctx, *__args, **__kwargs)
+                    if type_field_name in data:
+                        if data[type_field_name] not in _types_:
+                            # User's own data conflicts with the serialization key.
+                            raise KeyError(
+                                f"Key '{type_field_name}' already exist in the serialized data mapping! "
+                                f"Change ezserialization's {type_field_name=} to some other value to not "
+                                f"conflict with your existing codebase."
+                            )
+                        # Inner method already injected type info (inherited wrapper).
+                        # Strip it so we can re-add with the correct typename below.
+                        data = {k: v for k, v in data.items() if k != type_field_name}
                     if _get_serialization_enabled():
                         typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
-                        if type_field_name in data:
-                            # Inner method already injected type info (inherited wrapper).
-                            # Replace with the correct typename for this instance's type.
-                            data = {k: v for k, v in data.items() if k != type_field_name}
                         # Add deserialization metadata.
                         return {type_field_name: typename, **data}
                     return data
