@@ -5,6 +5,7 @@ from ezserialization import (
     Serializable,
     deserialize,
     serializable,
+    type_field_name,
 )
 
 
@@ -44,6 +45,44 @@ class _CaseBUsingNameAlias(Serializable):
     @classmethod
     def from_dict(cls, src: Mapping):
         return cls(value=src["value"])
+
+
+@serializable
+class _SerializableParent:
+    def __init__(self, value: str):
+        self.value = value
+
+    def to_dict(self) -> Mapping:
+        return {"value": self.value}
+
+    @classmethod
+    def from_dict(cls, src: Mapping):
+        return cls(value=src["value"])
+
+
+@serializable
+class _SerializableChild(_SerializableParent):
+    """Inherits to_dict/from_dict from parent."""
+    pass
+
+
+def test_serializable_inheritance():
+    # Parent round-trip
+    parent = _SerializableParent("hello")
+    data = parent.to_dict()
+    assert data[type_field_name] == f"{_SerializableParent.__module__}.{_SerializableParent.__qualname__}"
+    restored = deserialize(json.loads(json.dumps(data)))
+    assert isinstance(restored, _SerializableParent)
+    assert not isinstance(restored, _SerializableChild)
+    assert restored.value == "hello"
+
+    # Child round-trip (inherits to_dict/from_dict)
+    child = _SerializableChild("world")
+    data = child.to_dict()
+    assert data[type_field_name] == f"{_SerializableChild.__module__}.{_SerializableChild.__qualname__}"
+    restored = deserialize(json.loads(json.dumps(data)))
+    assert isinstance(restored, _SerializableChild)
+    assert restored.value == "world"
 
 
 def test_serialization_typenames_order():

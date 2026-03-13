@@ -149,15 +149,12 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 @functools.wraps(method)
                 def to_dict_wrapper(__ctx, *__args, **__kwargs):
                     data = method(__ctx, *__args, **__kwargs)
-                    # Wrap object with serialization metadata.
-                    if type_field_name in data:
-                        raise KeyError(
-                            f"Key '{type_field_name}' already exist in the serialized data mapping! "
-                            f"Change ezserialization's {type_field_name=} to some other value to not conflict with "
-                            f"your existing codebase."
-                        )
                     if _get_serialization_enabled():
                         typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
+                        if type_field_name in data:
+                            # Inner method already injected type info (inherited wrapper).
+                            # Replace with the correct typename for this instance's type.
+                            data = {k: v for k, v in data.items() if k != type_field_name}
                         # Add deserialization metadata.
                         return {type_field_name: typename, **data}
                     return data
@@ -171,8 +168,11 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 def from_dict_wrapper(*__args, **__kwargs) -> Serializable:
                     # Differentiate between different ways this method was called.
                     first_arg_type = val if isinstance(val := __args[0], type) else type(val)
-                    if _is_same_type_by_qualname(first_arg_type, cls_):
+                    if _is_same_type_by_qualname(first_arg_type, cls_) or (
+                        isinstance(val, type) and issubclass(val, cls_)
+                    ):
                         # When this method was called as instance-method i.e. Serializable().from_dict(...)
+                        # or via an outer wrapper passing a subclass as the first argument.
                         __cls = first_arg_type
                         src = __args[1]
                         __args = __args[2:]
@@ -187,6 +187,9 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     src.pop(type_field_name, None)
 
                     # Deserialize.
+                    if hasattr(method, "__func__"):
+                        # Bound classmethod: call underlying function with resolved class.
+                        return method.__func__(__cls, src, *__args, **__kwargs)
                     if hasattr(method, "__self__"):
                         # As bounded method (class or instance method)
                         return method(src, *__args, **__kwargs)
