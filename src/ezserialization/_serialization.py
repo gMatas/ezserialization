@@ -3,7 +3,7 @@ import functools
 import importlib
 import threading
 from abc import abstractmethod
-from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast
+from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast, overload
 
 __all__ = [
     "type_field_name",
@@ -149,13 +149,17 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 @functools.wraps(method)
                 def to_dict_wrapper(__ctx, *__args, **__kwargs):
                     data = method(__ctx, *__args, **__kwargs)
-                    # Wrap object with serialization metadata.
                     if type_field_name in data:
-                        raise KeyError(
-                            f"Key '{type_field_name}' already exist in the serialized data mapping! "
-                            f"Change ezserialization's {type_field_name=} to some other value to not conflict with "
-                            f"your existing codebase."
-                        )
+                        if data[type_field_name] not in _types_:
+                            # User's own data conflicts with the serialization key.
+                            raise KeyError(
+                                f"Key '{type_field_name}' already exist in the serialized data mapping! "
+                                f"Change ezserialization's {type_field_name=} to some other value to not "
+                                f"conflict with your existing codebase."
+                            )
+                        # Inner method already injected type info (inherited wrapper).
+                        # Strip it so we can re-add with the correct typename below.
+                        data = {k: v for k, v in data.items() if k != type_field_name}
                     if _get_serialization_enabled():
                         typename = _typenames_[__ctx if isinstance(__ctx, type) else type(__ctx)]
                         # Add deserialization metadata.
@@ -171,8 +175,13 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 def from_dict_wrapper(*__args, **__kwargs) -> Serializable:
                     # Differentiate between different ways this method was called.
                     first_arg_type = val if isinstance(val := __args[0], type) else type(val)
-                    if _is_same_type_by_qualname(first_arg_type, cls_):
+                    if (
+                        isinstance(val, type)
+                        and issubclass(val, cls_)
+                        or (_is_same_type_by_qualname(first_arg_type, cls_))
+                    ):
                         # When this method was called as instance-method i.e. Serializable().from_dict(...)
+                        # or via an outer wrapper passing a subclass as the first argument.
                         __cls = first_arg_type
                         src = __args[1]
                         __args = __args[2:]
@@ -187,6 +196,9 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     src.pop(type_field_name, None)
 
                     # Deserialize.
+                    if hasattr(method, "__func__"):
+                        # Bound classmethod: call underlying function with resolved class.
+                        return cast(Serializable, method.__func__(__cls, src, *__args, **__kwargs))
                     if hasattr(method, "__self__"):
                         # As bounded method (class or instance method)
                         return method(src, *__args, **__kwargs)
@@ -209,7 +221,25 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
     return wrapper(cls)
 
 
-def deserialize(src: Mapping) -> Serializable:
+@overload
+def deserialize(src: Mapping) -> Serializable: ...
+
+
+@overload
+def deserialize(src: Mapping, return_type: Type[_T]) -> _T: ...
+
+
+def deserialize(src: Mapping, return_type: Optional[Type[_T]] = None) -> Serializable:
+    """Deserialize a mapping into a Serializable object.
+
+    :param src: Source mapping containing serialized data with a type field.
+    :param return_type: Expected return type. If provided, the deserialized object
+        is validated to be an instance of this type.
+    :return: Deserialized object.
+    :raises KeyError: If the source mapping does not contain the type field.
+    :raises TypeError: If return_type is provided and the deserialized object
+        does not match.
+    """
     if not isdeserializable(src):
         raise KeyError(f"Given data mapping does not contain key '{type_field_name}' required for deserialization.")
 
@@ -233,4 +263,8 @@ def deserialize(src: Mapping) -> Serializable:
 
     cls = _types_[typename if typename_alias is None else typename_alias]
     obj = cls.from_dict(src)
+
+    if return_type is not None and not isinstance(obj, return_type):
+        raise TypeError(f"Expected {return_type.__name__}, got {type(obj).__name__}")
+
     return obj

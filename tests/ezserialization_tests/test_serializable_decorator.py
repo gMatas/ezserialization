@@ -1,10 +1,13 @@
 import json
 from typing import Mapping, cast
 
+import pytest
+
 from ezserialization import (
     Serializable,
     deserialize,
     serializable,
+    type_field_name,
 )
 
 
@@ -46,6 +49,45 @@ class _CaseBUsingNameAlias(Serializable):
         return cls(value=src["value"])
 
 
+@serializable
+class _SerializableParent:
+    def __init__(self, value: str):
+        self.value = value
+
+    def to_dict(self) -> Mapping:
+        return {"value": self.value}
+
+    @classmethod
+    def from_dict(cls, src: Mapping):
+        return cls(value=src["value"])
+
+
+@serializable
+class _SerializableChild(_SerializableParent):
+    """Inherits to_dict/from_dict from parent."""
+
+    pass
+
+
+def test_serializable_inheritance():
+    # Parent round-trip
+    parent = _SerializableParent("hello")
+    data = parent.to_dict()
+    assert data[type_field_name] == f"{_SerializableParent.__module__}.{_SerializableParent.__qualname__}"
+    restored = deserialize(json.loads(json.dumps(data)))
+    assert isinstance(restored, _SerializableParent)
+    assert not isinstance(restored, _SerializableChild)
+    assert restored.value == "hello"
+
+    # Child round-trip (inherits to_dict/from_dict)
+    child = _SerializableChild("world")
+    data = child.to_dict()
+    assert data[type_field_name] == f"{_SerializableChild.__module__}.{_SerializableChild.__qualname__}"
+    restored = deserialize(json.loads(json.dumps(data)))
+    assert isinstance(restored, _SerializableChild)
+    assert restored.value == "world"
+
+
 def test_serialization_typenames_order():
     """
     Expected behaviour: Only the top typename is used to serialize instances.
@@ -64,3 +106,30 @@ def test_serialization_typenames_order():
     data = b.to_dict()
     assert data["_type_"] == "B"
     assert b.value == cast(_CaseBUsingNameAlias, deserialize(json.loads(json.dumps(data)))).value
+
+
+def test_deserialize_return_type():
+    parent = _SerializableParent("hello")
+    data = json.loads(json.dumps(parent.to_dict()))
+
+    # Correct return_type passes
+    restored = deserialize(data, return_type=_SerializableParent)
+    assert isinstance(restored, _SerializableParent)
+    assert restored.value == "hello"
+
+    # Child is a subclass of parent, so return_type=parent should pass
+    child = _SerializableChild("world")
+    data = json.loads(json.dumps(child.to_dict()))
+    restored = deserialize(data, return_type=_SerializableParent)
+    assert isinstance(restored, _SerializableChild)
+
+    # Exact child type
+    restored = deserialize(data, return_type=_SerializableChild)
+    assert isinstance(restored, _SerializableChild)
+
+    # Wrong type raises TypeError
+    with pytest.raises(TypeError, match=f"Expected {_SerializableChild.__name__}"):
+        deserialize(
+            json.loads(json.dumps(parent.to_dict())),
+            return_type=_SerializableChild,
+        )
