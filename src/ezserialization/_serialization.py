@@ -198,7 +198,7 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                     # Deserialize.
                     if hasattr(method, "__func__"):
                         # Bound classmethod: call underlying function with resolved class.
-                        return method.__func__(__cls, src, *__args, **__kwargs)
+                        return cast(Serializable, method.__func__(__cls, src, *__args, **__kwargs))
                     if hasattr(method, "__self__"):
                         # As bounded method (class or instance method)
                         return method(src, *__args, **__kwargs)
