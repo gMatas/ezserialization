@@ -63,6 +63,7 @@ class _SerializableParent:
 @serializable
 class _SerializableChild(_SerializableParent):
     """Inherits to_dict/from_dict from parent."""
+
     pass
 
 
