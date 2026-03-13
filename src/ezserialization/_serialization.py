@@ -221,15 +221,18 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
     return wrapper(cls)
 
 
+_T_any = TypeVar("_T_any")
+
+
 @overload
 def deserialize(src: Mapping) -> Serializable: ...
 
 
 @overload
-def deserialize(src: Mapping, return_type: Type[_T]) -> _T: ...
+def deserialize(src: Mapping, return_type: Type[_T_any]) -> _T_any: ...
 
 
-def deserialize(src: Mapping, return_type: Optional[Type[_T]] = None) -> Serializable:
+def deserialize(src: Mapping, return_type: Optional[Type[_T_any]] = None) -> Serializable | _T_any:
     """Deserialize a mapping into a Serializable object.
 
     :param src: Source mapping containing serialized data with a type field.
