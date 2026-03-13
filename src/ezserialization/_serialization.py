@@ -3,7 +3,7 @@ import functools
 import importlib
 import threading
 from abc import abstractmethod
-from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast
+from typing import Callable, Dict, Iterator, Mapping, Optional, Protocol, Type, TypeVar, cast, overload
 
 __all__ = [
     "type_field_name",
@@ -221,7 +221,25 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
     return wrapper(cls)
 
 
-def deserialize(src: Mapping) -> Serializable:
+@overload
+def deserialize(src: Mapping) -> Serializable: ...
+
+
+@overload
+def deserialize(src: Mapping, return_type: Type[_T]) -> _T: ...
+
+
+def deserialize(src: Mapping, return_type: Optional[Type[_T]] = None) -> Serializable:
+    """Deserialize a mapping into a Serializable object.
+
+    :param src: Source mapping containing serialized data with a type field.
+    :param return_type: Expected return type. If provided, the deserialized object
+        is validated to be an instance of this type.
+    :return: Deserialized object.
+    :raises KeyError: If the source mapping does not contain the type field.
+    :raises TypeError: If return_type is provided and the deserialized object
+        does not match.
+    """
     if not isdeserializable(src):
         raise KeyError(f"Given data mapping does not contain key '{type_field_name}' required for deserialization.")
 
@@ -245,4 +263,8 @@ def deserialize(src: Mapping) -> Serializable:
 
     cls = _types_[typename if typename_alias is None else typename_alias]
     obj = cls.from_dict(src)
+
+    if return_type is not None and not isinstance(obj, return_type):
+        raise TypeError(f"Expected {return_type.__name__}, got {type(obj).__name__}")
+
     return obj
