@@ -175,8 +175,8 @@ def serializable(cls: Optional[Type[_T]] = None, *, name: Optional[str] = None):
                 def from_dict_wrapper(*__args, **__kwargs) -> Serializable:
                     # Differentiate between different ways this method was called.
                     first_arg_type = val if isinstance(val := __args[0], type) else type(val)
-                    if _is_same_type_by_qualname(first_arg_type, cls_) or (
-                        isinstance(val, type) and issubclass(val, cls_)
+                    if isinstance(val, type) and issubclass(val, cls_) or (
+                        _is_same_type_by_qualname(first_arg_type, cls_)
                     ):
                         # When this method was called as instance-method i.e. Serializable().from_dict(...)
                         # or via an outer wrapper passing a subclass as the first argument.
